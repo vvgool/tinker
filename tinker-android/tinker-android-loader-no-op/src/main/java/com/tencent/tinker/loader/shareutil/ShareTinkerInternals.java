@@ -26,7 +26,6 @@ import android.text.TextUtils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
@@ -54,9 +53,9 @@ public class ShareTinkerInternals {
     /**
      * or you may just hardcode them in your app
      */
-    private static       String  processName           = null;
-    private static       String  tinkerID              = null;
-    private static       String  currentInstructionSet = null;
+    private static final String[]  processName           = {null};
+    private static       String    tinkerID              = null;
+    private static       String    currentInstructionSet = null;
 
     public static boolean isVmArt() {
         return VM_IS_ART || Build.VERSION.SDK_INT >= 21;
@@ -467,12 +466,14 @@ public class ShareTinkerInternals {
      * @return
      */
     public static String getProcessName(final Context context) {
-        if (!TextUtils.isEmpty(processName)) {
-            return processName;
+        if (processName[0] == null) {
+            synchronized (processName) {
+                if (processName[0] == null) {
+                    processName[0] = getProcessNameInternal(context);
+                }
+            }
         }
-        //will not null
-        processName = getProcessNameInternal(context);
-        return processName;
+        return (processName[0] != null ? processName[0] : "");
     }
 
 

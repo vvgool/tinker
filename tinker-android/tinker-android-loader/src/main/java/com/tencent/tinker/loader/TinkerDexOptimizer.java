@@ -181,8 +181,7 @@ public final class TinkerDexOptimizer {
                     }
                 }
                 final File odexFile = new File(optimizedPath);
-                if (SharePatchFileUtil.isLegalFile(odexFile)
-                        || ShareTinkerInternals.isNewerOrEqualThanVersion(29, true)) {
+                if (SharePatchFileUtil.isLegalFile(odexFile) || SharePatchFileUtil.shouldAcceptEvenIfIllegal(odexFile)) {
                     if (callback != null) {
                         callback.onSuccess(dexFile, optimizedDir, odexFile);
                     }
@@ -241,8 +240,10 @@ public final class TinkerDexOptimizer {
             ShareTinkerLog.i(TAG, "[+] Oat file %s should be valid, skip triggering dexopt.", oatPath);
             return;
         }
-        for (int i = 0; i < 5; ++i) {
-            if (ShareTinkerInternals.isNewerOrEqualThanVersion(31, true)) {
+        for (int i = 0; i < 20; ++i) {
+            if (ShareTinkerInternals.isNewerOrEqualThanVersion(31, true)
+                    && !"xiaomi".equalsIgnoreCase(Build.MANUFACTURER) && !"redmi".equalsIgnoreCase(Build.MANUFACTURER)
+                    && !"oppo".equalsIgnoreCase(Build.MANUFACTURER) && !"vivo".equalsIgnoreCase(Build.MANUFACTURER)) {
                 try {
                     registerDexModule(context, dexPath);
                     if (SharePatchFileUtil.isLegalFile(oatFile)) {
@@ -279,20 +280,26 @@ public final class TinkerDexOptimizer {
                 ShareTinkerLog.printErrStackTrace(TAG, thr, "[-] Error.");
             }
             SystemClock.sleep(1000);
-            if ("huawei".equalsIgnoreCase(Build.MANUFACTURER) || "honor".equalsIgnoreCase(Build.MANUFACTURER)) {
-                try {
-                    registerDexModule(context, dexPath);
-                    if (SharePatchFileUtil.isLegalFile(oatFile)) {
-                        break;
-                    }
-                } catch (Throwable thr) {
-                    ShareTinkerLog.printErrStackTrace(TAG, thr, "[-] Error.");
-                }
-            }
-            SystemClock.sleep(3000);
         }
         if (!SharePatchFileUtil.isLegalFile(oatFile)) {
-            throw new IllegalStateException("No odex file was generated after calling performDexOptSecondary");
+            if ("huawei".equalsIgnoreCase(Build.MANUFACTURER) || "honor".equalsIgnoreCase(Build.MANUFACTURER)) {
+                for (int i = 0; i < 5; ++i) {
+                    try {
+                        registerDexModule(context, dexPath);
+                        if (SharePatchFileUtil.isLegalFile(oatFile)) {
+                            break;
+                        }
+                    } catch (Throwable thr) {
+                        ShareTinkerLog.printErrStackTrace(TAG, thr, "[-] Error.");
+                    }
+                    SystemClock.sleep(3000);
+                }
+                if (!SharePatchFileUtil.isLegalFile(oatFile)) {
+                    throw new IllegalStateException("No odex file was generated after calling registerDexModule");
+                }
+            } else {
+                throw new IllegalStateException("No odex file was generated after calling performDexOptSecondary");
+            }
         }
     }
 
